@@ -7,3 +7,20 @@ Airflow or Apache should be used for the scheduling
 PowerBI would be used for the dashboard (may take this away)
 Need to make this an automated pipeline
 potentially send alerts if thersholds are met 
+
+Target Cities in the US
+Birmingham,AL
+Miami,FL
+Nashville,TN
+Atlanta,GA
+New York City,NY
+Dallas,TX
+Phoenix,AZ
+Los Angelos,CA
+Seattle,WA
+Boise,ID
+Denver,CO
+Kansas City,MO
+Columbus,OH
+Salt Lake City,UT
+Minneapolis,MN
