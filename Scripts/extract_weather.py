@@ -109,16 +109,17 @@ df = pd.DataFrame(weather_data)
 df.to_csv("../data/daily_weather_data.csv", index=False)
 print("Data extraction complete. Data saved to weather_data.csv.")
 # extracting the historical data 
-"""Variables for the ETL process:
-       coord: lon, lat
-       weather: id,main,description,icon
-       base: base
-       main: temp,feels_like,temp_min,temp_max,pressure,humidity,sea_level,grnd_level
-       visibility: visibility
-       wind: speed,deg
-       clouds: all
-       dt: dt
-       sys: type,id,country,sunrise,sunset,1h
-       timezone: timezone
-       other: id,name,cod
-       """
+
+
+historical_weather_data = []
+"""
+Step find the last 30 days and add to a list
+then iteriate through those and requst the content for the 
+cities and store in a new list 
+"""
+
+
+
+
+
+       
