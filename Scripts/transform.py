@@ -31,6 +31,7 @@ def convert_to_datetime(df):
     temparture binding so 32 < would be 'Freezing', <85 extreme heat
     Calculate daylight duration 
     humidity levels
+    change visibility from meters to ft 
     
     
     
