@@ -16,11 +16,11 @@ Atlanta,GA
 New York City,NY
 Dallas,TX
 Phoenix,AZ
-Los Angelos,CA
+Los Angeles,CA
 Seattle,WA
 Boise,ID
 Denver,CO
 Kansas City,MO
-Columbus,OH
+Chicago,IL
 Salt Lake City,UT
 Minneapolis,MN
