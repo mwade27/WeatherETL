@@ -1,9 +1,10 @@
 import requests
 import pandas as pd
 import json
-from datetime import datetime
+from datetime import datetime,date,timedelta
 from dotenv import load_dotenv
 import os
+import time
 load_dotenv()
 Target_cities = ["Birmingham","Miami","New York","Los Angeles","Phoenix"]
 #Target_cities = ["Birmingham","Miami","New York","Los Angeles","Phoenix","Nashville","Dallas",
@@ -28,9 +29,11 @@ def extractcitydata(Target_cities,weather_data,API_KEY):
             weather_data.append({
                 "city": data['name'],
                 "id": data['id'], 
-                "longitude":data['coord']['lon'],
-                "latitude":data['coord']['lat'],
-                })
+                "longitude": data['coord']['lon'],
+                "latitude": data['coord']['lat'],
+                "sea_level": data['main'].get('sea_level'),
+                "ground_level": data['main'].get('grnd_level')
+            })
         else:
             print("Failed to retrieve data:", response.status_code)
             print("Message:" + response.json().get("message", "No message available"))
@@ -101,7 +104,7 @@ def extractdailyweatherdata(weather_data,API_KEY):
     return weather_data
             
 extractdailyweatherdata(weather_data,API_KEY)   
-print(weather_data)
+#print(weather_data)
 
     
    
@@ -112,6 +115,67 @@ print("Data extraction complete. Data saved to weather_data.csv.")
 
 
 historical_weather_data = []
+extractcitydata(Target_cities,historical_weather_data,API_KEY)
+
+def extractHistoricalWeatherdata(historical_data,API_KEY):
+    past_dates = []
+    today = datetime.now().date()
+    for i in range(30):
+        past_date = today - timedelta(days=i)
+        # Convert date to datetime before calling timestamp()
+        past_datetime = datetime.combine(past_date, datetime.min.time())
+        unix_time = int(past_datetime.timestamp())
+        past_dates.append(unix_time)
+    for city in historical_data:
+       for unix_time in past_dates:
+        url = f"https://api.openweathermap.org/data/3.0/onecall/timemachine?lat={city['latitude']}&lon={city['longitude']}&dt={unix_time}&appid={API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+        if response.status_code == 200:
+            hourly = data.get("data", [{}])[0]
+            city.update({
+                "timezone": data.get("timezone"),
+                "timezone_offset": data.get("timezone_offset"),
+                "datetime": hourly.get("dt"),
+                "sunrise": hourly.get("sunrise"),
+                "sunset": hourly.get("sunset"),
+                "temp": hourly.get("temp"),
+                "feels_like": hourly.get("feels_like"),
+                "pressure": hourly.get("pressure"),
+                "humidity": hourly.get("humidity"),
+                "dew_point": hourly.get("dew_point"),
+                "clouds": hourly.get("clouds"),
+                "uvi": hourly.get("uvi"),
+                "visibility": hourly.get("visibility"),
+                "wind_speed": hourly.get("wind_speed"),
+                "wind_gust": hourly.get("wind_gust"),
+                "wind_deg": hourly.get("wind_deg"),
+                "weather_id": hourly.get("weather", [{}])[0].get("id"),
+                "weather_name": hourly.get("weather", [{}])[0].get("main"),
+                "weather_description": hourly.get("weather", [{}])[0].get("description"),
+                "rain_1h": hourly.get("rain", {}).get("1h", 0),
+                "snow_1h": hourly.get("snow", {}).get("1h", 0)
+            })
+        else:
+            print("Failed to retrieve data:", response.status_code)
+            print("Message:" + response.json().get("message", "No message available"))
+        time.sleep(2)
+        
+    return(historical_data)
+    
+        
+    
+            
+    
+    
+    
+    
+    
+#extractHistoricalWeatherdata(historical_weather_data,API_KEY)
+#df = historical_weather_data
+#df.to_csv("../data/historical_weather_data.csv", index=False)
+    
+    
 """
 Step find the last 30 days and add to a list
 then iteriate through those and requst the content for the 
