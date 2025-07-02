@@ -1,14 +1,15 @@
 import requests
 import pandas as pd
 import json
-from datetime import datetime,date,timedelta
+from datetime import datetime,date,timedelta, time
 from dotenv import load_dotenv
 import os
-import time
+import time as time_module
+
 load_dotenv()
-Target_cities = ["Birmingham","Miami","New York","Los Angeles","Phoenix"]
-#Target_cities = ["Birmingham","Miami","New York","Los Angeles","Phoenix","Nashville","Dallas",
-#                "Seattle","Boise", "Denver", "Atlanta","Chicago","Kansas City","Salt Lake City","Minneapolis"]
+#Target_cities = ["Birmingham","Miami","New York","Los Angeles","Phoenix"]
+Target_cities = ["Birmingham","Miami","New York","Los Angeles","Phoenix","Nashville",
+                "Seattle","Boise", "Denver", "Atlanta","Chicago","Kansas City"]
 Target_City = "Huntsville"
 API_KEY = os.getenv("API_KEY")
 
@@ -32,7 +33,8 @@ def extractcitydata(Target_cities,weather_data,API_KEY):
                 "longitude": data['coord']['lon'],
                 "latitude": data['coord']['lat'],
                 "sea_level": data['main'].get('sea_level'),
-                "ground_level": data['main'].get('grnd_level')
+                "ground_level": data['main'].get('grnd_level'),
+                "timezone": data['timezone']
             })
         else:
             print("Failed to retrieve data:", response.status_code)
@@ -49,119 +51,126 @@ Sends request to api to fetch content for the city
 Takes content and adds to the specified city dictionary
 returns weather data      
 """
-def extractdailyweatherdata(weather_data,API_KEY):
+#get the unix time for the timestamps of the current date
+hours = [0, 4, 8, 12, 16, 20]
+todaysdate = date.today()
+
+unixtimes = []
+for h in hours:
+    dt = datetime.combine(todaysdate, time(hour=h))
+    unixtimes.append(int(dt.timestamp()))
+
+print(unixtimes)
+
+def currentdateweatherdata(weather_data, API_KEY, unixtimes):
+    results = []
     for city in weather_data:
-        
-        url = f"https://api.openweathermap.org/data/3.0/onecall?lat={city['latitude']}&lon={city['longitude']}&exclude=minutely&units=imperial&appid={API_KEY}"
-        response = requests.get(url)
-        
-        if response.status_code == 200:
-            data = response.json()
-            city.update({
-                "timezone": data.get("timezone"),
-                "timezone_offset": data.get("timezone_offset"),
-                "sunrise": data["current"].get("sunrise"),
-                "sunset": data["current"].get("sunset"),
-                "temp": data["current"].get("temp"),
-                "feels_like": data["current"].get("feels_like"),
-                "pressure": data["current"].get("pressure"),
-                "humidity": data["current"].get("humidity"),
-                "dew_point": data["current"].get("dew_point"),
-                "uvi": data["current"].get("uvi"),
-                "clouds": data["current"].get("clouds"),
-                "visibility": data["current"].get("visibility"),
-                "wind_speed": data["current"].get("wind_speed"),
-                "wind_deg": data["current"].get("wind_deg"),
-                "wind_gust": data["current"].get("wind_gust"),
-                "rain": data["current"].get("rain", {}).get("1h", 0),
-                "snow": data["current"].get("snow", {}).get("1h", 0),
-                "weather_id": data["current"].get("weather", [{}])[0].get("id"),
-                "weather_name": data["current"].get("weather", [{}])[0].get("main"),
-                "weather_description": data["current"].get("weather", [{}])[0].get("description"),
-                "dt": data['daily'][0].get("dt") if "daily" in data and len(data["daily"]) > 0 else None,
-                "moonrise": data['daily'][0].get("moonrise") if "daily" in data and len(data["daily"]) > 0 else None,
-                "moonset": data['daily'][0].get("moonset") if "daily" in data and len(data["daily"]) > 0 else None,
-                "moon_phase": data['daily'][0].get("moon_phase") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily pressure": data['daily'][0].get("pressure") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily humidity": data['daily'][0].get("humidity") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily dew point": data['daily'][0].get("dew_point") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily wind speed": data['daily'][0].get("wind_speed") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily wind gust": data['daily'][0].get("wind_gust") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily wind deg": data['daily'][0].get("wind_deg") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily clouds": data['daily'][0].get("clouds") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily uvi": data['daily'][0].get("uvi") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily pop": data['daily'][0].get("pop") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily rain": data['daily'][0].get("rain", None) if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily snow": data['daily'][0].get("snow", None) if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily weather_id": data['daily'][0].get("weather", [{}])[0].get("id") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily weather name": data['daily'][0].get("weather", [{}])[0].get("main") if "daily" in data and len(data["daily"]) > 0 else None,
-                "daily weather description": data['daily'][0].get("weather", [{}])[0].get("description") if "daily" in data and len(data["daily"]) > 0 else None,
-            })
-        else:
-            print("Failed to retrieve data:", response.status_code)
-            print("Message:" + response.json().get("message", "No message available"))
-        
-    return weather_data
-            
-extractdailyweatherdata(weather_data,API_KEY)   
+        for unix_time in unixtimes:
+            url = f"https://api.openweathermap.org/data/3.0/onecall/timemachine?lat={city['latitude']}&lon={city['longitude']}&dt={unix_time}&units=imperial&appid={API_KEY}"
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                hourly = data.get("data", [{}])[0]
+                record = {
+                    "city": city["city"],
+                    "latitude": city["latitude"],
+                    "longitude": city["longitude"],
+                    "timestamp": unix_time,
+                    "timezone": data.get("timezone"),
+                    "timezone_offset": data.get("timezone_offset"),
+                    "datetime": hourly.get("dt"),
+                    "sunrise": hourly.get("sunrise"),
+                    "sunset": hourly.get("sunset"),
+                    "temp": hourly.get("temp"),
+                    "feels_like": hourly.get("feels_like"),
+                    "pressure": hourly.get("pressure"),
+                    "humidity": hourly.get("humidity"),
+                    "dew_point": hourly.get("dew_point"),
+                    "clouds": hourly.get("clouds"),
+                    "uvi": hourly.get("uvi"),
+                    "visibility": hourly.get("visibility"),
+                    "wind_speed": hourly.get("wind_speed"),
+                    "wind_gust": hourly.get("wind_gust"),
+                    "wind_deg": hourly.get("wind_deg"),
+                    "weather_id": hourly.get("weather", [{}])[0].get("id"),
+                    "weather_name": hourly.get("weather", [{}])[0].get("main"),
+                    "weather_description": hourly.get("weather", [{}])[0].get("description"),
+                    "rain_1h": hourly.get("rain", {}).get("1h", 0),
+                    "snow_1h": hourly.get("snow", {}).get("1h", 0)
+                }
+                results.append(record)
+            else:
+                print("Failed to retrieve data:", response.status_code)
+                print("Message:" + response.json().get("message", "No message available"))
+    return results
+                 
+current_results = currentdateweatherdata(weather_data,API_KEY,unixtimes)
+
+
+             
 #print(weather_data)
 
     
    
-df = pd.DataFrame(weather_data)
-df.to_csv("../data/daily_weather_data.csv", index=False)
+df = pd.DataFrame(current_results)
+df.to_csv("../data/current_weather_data.csv", index=False)
 print("Data extraction complete. Data saved to weather_data.csv.")
 # extracting the historical data 
 
 
-historical_weather_data = []
-extractcitydata(Target_cities,historical_weather_data,API_KEY)
-
-def extractHistoricalWeatherdata(historical_data,API_KEY):
+#historical_weather_data = []
+#extractcitydata(Target_cities,historical_weather_data,API_KEY)
+def extractHistoricalWeatherdata(historical_data, API_KEY):
     past_dates = []
     today = datetime.now().date()
+    hours = [0, 4, 8, 12, 16, 20]
     for i in range(30):
         past_date = today - timedelta(days=i)
-        # Convert date to datetime before calling timestamp()
-        past_datetime = datetime.combine(past_date, datetime.min.time())
-        unix_time = int(past_datetime.timestamp())
-        past_dates.append(unix_time)
+        for h in hours:
+            past_datetime = datetime.combine(past_date, time(hour=h))
+            unix_time = int(past_datetime.timestamp())
+            past_dates.append(unix_time)
+    results = []
     for city in historical_data:
-       for unix_time in past_dates:
-        url = f"https://api.openweathermap.org/data/3.0/onecall/timemachine?lat={city['latitude']}&lon={city['longitude']}&dt={unix_time}&appid={API_KEY}"
-        response = requests.get(url)
-        data = response.json()
-        if response.status_code == 200:
-            hourly = data.get("data", [{}])[0]
-            city.update({
-                "timezone": data.get("timezone"),
-                "timezone_offset": data.get("timezone_offset"),
-                "datetime": hourly.get("dt"),
-                "sunrise": hourly.get("sunrise"),
-                "sunset": hourly.get("sunset"),
-                "temp": hourly.get("temp"),
-                "feels_like": hourly.get("feels_like"),
-                "pressure": hourly.get("pressure"),
-                "humidity": hourly.get("humidity"),
-                "dew_point": hourly.get("dew_point"),
-                "clouds": hourly.get("clouds"),
-                "uvi": hourly.get("uvi"),
-                "visibility": hourly.get("visibility"),
-                "wind_speed": hourly.get("wind_speed"),
-                "wind_gust": hourly.get("wind_gust"),
-                "wind_deg": hourly.get("wind_deg"),
-                "weather_id": hourly.get("weather", [{}])[0].get("id"),
-                "weather_name": hourly.get("weather", [{}])[0].get("main"),
-                "weather_description": hourly.get("weather", [{}])[0].get("description"),
-                "rain_1h": hourly.get("rain", {}).get("1h", 0),
-                "snow_1h": hourly.get("snow", {}).get("1h", 0)
-            })
-        else:
-            print("Failed to retrieve data:", response.status_code)
-            print("Message:" + response.json().get("message", "No message available"))
-        time.sleep(2)
-        
-    return(historical_data)
+        for unix_time in past_dates:
+            url = f"https://api.openweathermap.org/data/3.0/onecall/timemachine?lat={city['latitude']}&lon={city['longitude']}&dt={unix_time}&appid={API_KEY}"
+            response = requests.get(url)
+            data = response.json()
+            if response.status_code == 200:
+                hourly = data.get("data", [{}])[0]
+                record = {
+                    "city": city["city"],
+                    "latitude": city["latitude"],
+                    "longitude": city["longitude"],
+                    "timestamp": unix_time,
+                    "timezone": data.get("timezone"),
+                    "timezone_offset": data.get("timezone_offset"),
+                    "datetime": hourly.get("dt"),
+                    "sunrise": hourly.get("sunrise"),
+                    "sunset": hourly.get("sunset"),
+                    "temp": hourly.get("temp"),
+                    "feels_like": hourly.get("feels_like"),
+                    "pressure": hourly.get("pressure"),
+                    "humidity": hourly.get("humidity"),
+                    "dew_point": hourly.get("dew_point"),
+                    "clouds": hourly.get("clouds"),
+                    "uvi": hourly.get("uvi"),
+                    "visibility": hourly.get("visibility"),
+                    "wind_speed": hourly.get("wind_speed"),
+                    "wind_gust": hourly.get("wind_gust"),
+                    "wind_deg": hourly.get("wind_deg"),
+                    "weather_id": hourly.get("weather", [{}])[0].get("id"),
+                    "weather_name": hourly.get("weather", [{}])[0].get("main"),
+                    "weather_description": hourly.get("weather", [{}])[0].get("description"),
+                    "rain_1h": hourly.get("rain", {}).get("1h", 0),
+                    "snow_1h": hourly.get("snow", {}).get("1h", 0)
+                }
+                results.append(record)
+            else:
+                print("Failed to retrieve data:", response.status_code)
+                print("Message:" + response.json().get("message", "No message available"))
+            time_module.sleep(2)
+    return results
     
         
     
@@ -171,8 +180,9 @@ def extractHistoricalWeatherdata(historical_data,API_KEY):
     
     
     
-#extractHistoricalWeatherdata(historical_weather_data,API_KEY)
-#df = historical_weather_data
+#historical_results = extractHistoricalWeatherdata(historical_weather_data,API_KEY)
+#df = pd.DataFrame(historical_results)
+
 #df.to_csv("../data/historical_weather_data.csv", index=False)
     
     
