@@ -1,3 +1,6 @@
 pandas
 requests
 python-dotenv
+numpy
+psycopg2-binary
+mysql-connector-python
