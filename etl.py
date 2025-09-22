@@ -11,7 +11,7 @@ from retry_requests import retry
 database = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="slyfox2708",
+    ,
     database="weather_db"
 )
 print(database)
